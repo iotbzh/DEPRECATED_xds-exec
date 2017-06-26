@@ -11,8 +11,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
+	common "github.com/iotbzh/xds-common/golib"
 	"github.com/iotbzh/xds-server/lib/apiv1"
-	"github.com/iotbzh/xds-server/lib/common"
 	"github.com/iotbzh/xds-server/lib/crosssdk"
 	"github.com/iotbzh/xds-server/lib/xdsconfig"
 	"github.com/joho/godotenv"
