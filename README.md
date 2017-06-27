@@ -74,6 +74,58 @@ xds-exec --config config.env -- cd build && cmake ..
 xds-exec --config config.env -- cd build && make all
 ```
 
+## How to install xds-exec
+
+### Install package for debian distro type
+
+```bash
+export DISTRO="Debian_8.0"
+wget -O - http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/Release.key | sudo apt-key add -
+sudo bash -c "cat >/etc/apt/sources.list.d/AGL.list<<EOL
+#AGL
+deb http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/ ./
+EOL
+"
+sudo apt-get update
+sudo apt-get install agl-xds-exec-bin
+```
+
+The value 'DISTRO' can be set to {Debian_8.0, Debian_9.0, xUbuntu_16.04, xUbuntu_16.10, xUbuntu_17.04}
+
+Update the package
+```bash
+sudo apt-get update
+sudo apt-get upgrade agl-xds-exec-bin
+```
+
+The files are install here:
+```bash
+/opt/AGL/agl-xds-exec
+```
+
+### Install package for rpm distro type
+
+#### openSUSE
+```bash
+export DISTRO="openSUSE_Leap_42.2"
+sudo zypper ar http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/isv:LinuxAutomotive:app-Development.repo
+sudo zypper ref
+sudo zypper install agl-xds-exec
+```
+
+The value 'DISTRO' can be set to {openSUSE_Leap_42.2, openSUSE_Leap_42.3, openSUSE_Tumbleweed}
+
+Update the package
+```bash
+sudo zypper ref
+sudo zypper install --force agl-xds-exec
+```
+
+The files are install here:
+```bash
+/opt/AGL/agl-xds-exec
+```
+
 ## How to build
 
 ### Prerequisites
@@ -83,11 +135,12 @@ xds-exec --config config.env -- cd build && make all
 ### Building
 Clone this repo into your `$GOPATH/src/github.com/iotbzh` and use delivered Makefile:
 ```bash
+ export GOPATH=$(realpath ~/workspace_go)
  mkdir -p $GOPATH/src/github.com/iotbzh
  cd $GOPATH/src/github.com/iotbzh
  git clone https://github.com/iotbzh/xds-exec.git
  cd xds-exec
- make all
+ make
 ```
 
 ## Debug
