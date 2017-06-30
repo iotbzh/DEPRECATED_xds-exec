@@ -29,6 +29,60 @@ your local host. Please refer to instructions provided by XDS dashboard or see
 
 Then create your project you XDS dashboard.
 
+### Installing xds-exec
+
+#### Install package for debian distro type
+
+```bash
+export DISTRO="Debian_8.0"
+wget -O - http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/Release.key | sudo apt-key add -
+sudo bash -c "cat >/etc/apt/sources.list.d/AGL.list <<EOF
+#AGL
+deb http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/ ./
+EOF
+"
+sudo apt-get update
+sudo apt-get install agl-xds-exec
+```
+
+The value 'DISTRO' can be set to {Debian_8.0, Debian_9.0, xUbuntu_16.04, xUbuntu_16.10, xUbuntu_17.04}
+
+Update the package
+```bash
+sudo apt-get update
+sudo apt-get upgrade agl-xds-exec
+```
+
+The files are install here:
+```bash
+/opt/AGL/agl-xds-exec
+```
+
+#### Install package for rpm distro type
+
+##### openSUSE
+```bash
+export DISTRO="openSUSE_Leap_42.2"
+sudo zypper ar http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/isv:LinuxAutomotive:app-Development.repo
+sudo zypper ref
+sudo zypper install agl-xds-exec
+```
+
+The value 'DISTRO' can be set to {openSUSE_Leap_42.2, openSUSE_Leap_42.3, openSUSE_Tumbleweed}
+
+Update the package
+```bash
+sudo zypper ref
+sudo zypper install --force agl-xds-exec
+```
+
+The files are install here:
+```bash
+/opt/AGL/agl-xds-exec
+```
+
+### Using xds-exec from command line
+
 You need to determine which is the unique id of your project. You can find
 this ID in project page of XDS dashboard or you can get it from command line
 using the `--list` option. This option lists all existing projects ID:
@@ -48,7 +102,10 @@ You are now ready to use XDS to for example cross build your project.
 Here is an example to build a project based on CMakefile:
 ```bash
 # Add xds-exec in the PATH
-export PATH=${PATH}:${path_where_xds-exec_is_install}
+export PATH=${PATH}:/opt/AGL/agl-xds-exec
+
+# Go into your project directory
+cd $MY_PROJECT_DIR
 
 # Create a build directory
 xds-exec --id=CKI7R47-UWNDQC3_myProject --sdkid=poky-agl_aarch64_3.99.1+snapshot --url=http://localhost:8000 -- mkdir build
@@ -74,57 +131,110 @@ xds-exec --config config.env -- cd build && cmake ..
 xds-exec --config config.env -- cd build && make all
 ```
 
-## How to install xds-exec
+### Using xds-exec within an IDE
 
-### Install package for debian distro type
-
+#### Visual Studio Code
+Open your project in VSC
 ```bash
-export DISTRO="Debian_8.0"
-wget -O - http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/Release.key | sudo apt-key add -
-sudo bash -c "cat >/etc/apt/sources.list.d/AGL.list<<EOL
-#AGL
-deb http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/ ./
-EOL
-"
-sudo apt-get update
-sudo apt-get install agl-xds-exec-bin
+cd $MY_PROJECT_DIR
+code . &
+```
+Add new tasks : press `Ctrl+Shift+P` and select the `Tasks: Configure Task Runner` command and you will see a list of task runner templates.
+
+And define your own tasks, here is an example to build [unicens2-binding](https://github.com/iotbzh/unicens2-binding) AGL binding based on cmake (_options value of args array must be updated regarding your settings_):
+
+```json
+{
+    "version": "0.1.0",
+    "linux": {
+        "command": "/opt/AGL/agl-xds-exec/xds-exec"
+    },
+    "isShellCommand": true,
+    "args": [
+        "-url", "localhost:8010",
+        "-id", "W2EAQBA-HQI75XA_unicens2-binding",
+        "-sdkid", "poky-agl_aarch64_3.99.1+snapshot",
+        "--"
+    ],
+    "showOutput": "always",
+    "tasks": [{
+            "taskName": "clean",
+            "suppressTaskName": true,
+            "args": [
+                "rm -rf build/* && echo Cleanup done."
+            ]
+        },
+        {
+            "taskName": "pre-build",
+            "isBuildCommand": true,
+            "suppressTaskName": true,
+            "args": [
+                "mkdir -p build && cd build && cmake -DRSYNC_TARGET=root@192.168.168.11 -DRSYNC_PREFIX=./opt"
+            ]
+        },
+        {
+            "taskName": "build",
+            "isBuildCommand": true,
+            "suppressTaskName": true,
+            "args": [
+                "cd build && make widget"
+            ],
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": ["absolute"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            }
+        },
+        {
+            "taskName": "populate",
+            "suppressTaskName": true,
+            "args" : [
+                "cd build && make widget-target-install"
+            ]
+        }
+    ]
+}
 ```
 
-The value 'DISTRO' can be set to {Debian_8.0, Debian_9.0, xUbuntu_16.04, xUbuntu_16.10, xUbuntu_17.04}
+> **NOTE** You can also add your own keybindings to trig above tasks, for example:
+> ```json
+> // Build
+> {
+>   "key": "alt+f9",
+>   "command": "workbench.action.tasks.runTask",
+>   "args": "clean"
+> },
+> {
+>   "key": "alt+f10",
+>   "command": "workbench.action.tasks.runTask",
+>   "args": "pre-build"
+> },
+> {
+>   "key": "alt+f11",
+>   "command": "workbench.action.tasks.runTask",
+>   "args": "build"
+> },
+> {
+>   "key": "alt+f12",
+>   "command": "workbench.action.tasks.runTask",
+>   "args": "populate"
+> },
+> ```
+>
+> More details about VSC keybindings [here](https://code.visualstudio.com/docs/editor/tasks#_binding-keyboard-shortcuts-to-tasks)
+>
+> More details about VSC tasks [here](https://code.visualstudio.com/docs/editor/tasks)
 
-Update the package
-```bash
-sudo apt-get update
-sudo apt-get upgrade agl-xds-exec-bin
-```
+#### Others IDE
+*Coming soon...*
 
-The files are install here:
-```bash
-/opt/AGL/agl-xds-exec
-```
-
-### Install package for rpm distro type
-
-#### openSUSE
-```bash
-export DISTRO="openSUSE_Leap_42.2"
-sudo zypper ar http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/isv:LinuxAutomotive:app-Development.repo
-sudo zypper ref
-sudo zypper install agl-xds-exec
-```
-
-The value 'DISTRO' can be set to {openSUSE_Leap_42.2, openSUSE_Leap_42.3, openSUSE_Tumbleweed}
-
-Update the package
-```bash
-sudo zypper ref
-sudo zypper install --force agl-xds-exec
-```
-
-The files are install here:
-```bash
-/opt/AGL/agl-xds-exec
-```
 
 ## How to build
 
