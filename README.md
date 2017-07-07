@@ -111,24 +111,30 @@ cd $MY_PROJECT_DIR
 xds-exec --id=CKI7R47-UWNDQC3_myProject --sdkid=poky-agl_aarch64_3.99.1+snapshot --url=http://localhost:8000 -- mkdir build
 
 # Generate build system using cmake
-xds-exec --id=CKI7R47-UWNDQC3_myProject --sdkid=poky-agl_aarch64_3.99.1+snapshot  --url=http://localhost:8000 -- cd build && cmake ..
+xds-exec --id=CKI7R47-UWNDQC3_myProject --sdkid=poky-agl_aarch64_3.99.1+snapshot --url=http://localhost:8000 -- cd build && cmake ..
 
 # Build the project
-xds-exec --id=CKI7R47-UWNDQC3_myProject --sdkid=poky-agl_aarch64_3.99.1+snapshot  --url=http://localhost:8000 -- cd build && make all
+xds-exec --id=CKI7R47-UWNDQC3_myProject --sdkid=poky-agl_aarch64_3.99.1+snapshot --url=http://localhost:8000 -- cd build && make all
 ```
 
 To avoid to set project id, xds server url, ... at each command line, you can
 define these settings as environment variable within an env file and just set
-`--config` option. For example, the equivalence of above command is:
+`--config` option or source file before executing xds-exec.
+
+For example, the equivalence of above command is:
 ```
-cat config.env
-  XDS_SERVER_URL=localhost:8000
-  XDS_PROJECT_ID=CKI7R47-UWNDQC3_myProject
-  XDS_SDK_ID=poky-agl_aarch64_3.99.1+snapshot
+cat > config.env << EOF
+ export XDS_SERVER_URL=localhost:8000
+ export XDS_PROJECT_ID=CKI7R47-UWNDQC3_myProject
+ export XDS_SDK_ID=poky-agl_aarch64_3.99.1+snapshot
+EOF
 
 xds-exec --config config.env -- mkdir build
-xds-exec --config config.env -- cd build && cmake ..
-xds-exec --config config.env -- cd build && make all
+
+# Or sourcing env file
+source config.env
+xds-exec -- cd build && cmake ..
+xds-exec -- cd build && make all
 ```
 
 ### Using xds-exec within an IDE
