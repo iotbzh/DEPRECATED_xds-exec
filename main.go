@@ -47,6 +47,13 @@ const (
 	defaultLogLevel = "error"
 )
 
+// exitError exists this program with the specified error
+func exitError(code int, f string, a ...interface{}) {
+	err := fmt.Sprintf(f, a...)
+	fmt.Fprintf(os.Stderr, err+"\n")
+	os.Exit(code)
+}
+
 // main
 func main() {
 	var uri, prjID, rPath, logLevel, sdkid, confFile string
@@ -96,7 +103,7 @@ func main() {
 			Destination: &listProject,
 		},
 		cli.StringFlag{
-			Name:        "log",
+			Name:        "log, l",
 			EnvVar:      "XDS_LOGLEVEL",
 			Usage:       "logging level (supported levels: panic, fatal, error, warn, info, debug)",
 			Value:       defaultLogLevel,
@@ -143,7 +150,7 @@ func main() {
 			env = fb.EnvVar
 			usage = fb.Usage
 		default:
-			panic("Un-implemented option type")
+			exitError(1, "Un-implemented option type")
 		}
 		if env != "" {
 			dynDesc += fmt.Sprintf("\n %s \t\t %s", env, usage)
@@ -165,14 +172,17 @@ func main() {
 			if a == "-c" || a == "--config" {
 				// Source config file when set
 				confFile = os.Args[idx+2]
-				if confFile != "" && exists(confFile) {
+				if confFile != "" {
+					if !exists(confFile) {
+						exitError(1, "Error env config file not found")
+					}
 					err := godotenv.Load(confFile)
 					if err != nil {
-						panic("Error loading env config file " + confFile)
+						exitError(1, "Error loading env config file "+confFile)
 					}
 					envMap, err = godotenv.Read(confFile)
 					if err != nil {
-						panic("Error reading env config file " + confFile)
+						exitError(1, "Error reading env config file "+confFile)
 					}
 				}
 			}
@@ -207,8 +217,8 @@ func main() {
 
 		// Set logger level and formatter
 		if log.Level, err = logrus.ParseLevel(logLevel); err != nil {
-			fmt.Printf("Invalid log level : \"%v\"\n", logLevel)
-			os.Exit(1)
+			msg := fmt.Sprintf("Invalid log level : \"%v\"\n", logLevel)
+			return cli.NewExitError(msg, 1)
 		}
 		log.Formatter = &logrus.TextFormatter{}
 
