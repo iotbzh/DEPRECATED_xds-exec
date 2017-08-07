@@ -53,12 +53,13 @@ endif
 REPOPATH=github.com/iotbzh/xds-exec
 TARGET := xds-exec
 
-build: $(TARGET)
+all: vendor build
 
-xds-exec: vendor
-	@echo "### Build $@ (version $(VERSION), subversion $(SUB_VERSION)) - $(BUILD_MODE)";
-	@cd $(ROOT_SRCDIR); $(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -i -o $(BINDIR)/$@$(EXT) -ldflags "$(GORELEASE) -X main.AppVersion=$(VERSION) -X main.AppSubVersion=$(SUB_VERSION)" .
-	@([ "$(HOST_GOOS)" = "linux" ] && { cd $(BINDIR) && ln -sf $@ $(subst xds-,,$@); } || { true; } )
+.PHONY: build
+build:
+	@echo "### Build $(TARGET) (version $(VERSION), subversion $(SUB_VERSION)) - $(BUILD_MODE)";
+	@cd $(ROOT_SRCDIR); $(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -i -o $(BINDIR)/$(TARGET)$(EXT) -ldflags "$(GORELEASE) -X main.AppVersion=$(VERSION) -X main.AppSubVersion=$(SUB_VERSION)" .
+	@([ "$(HOST_GOOS)" = "linux" ] && { cd $(BINDIR) && ln -sf $(TARGET) $(subst xds-,,$(TARGET)); } || { true; } )
 
 test: tools/glide
 	go test --race $(shell ./tools/glide novendor)
@@ -107,7 +108,8 @@ tools/glide:
 
 help:
 	@echo "Main supported rules:"
-	@echo "  build               (default)"
+	@echo "  all               (default)"
+	@echo "  build"
 	@echo "  release"
 	@echo "  clean"
 	@echo "  package"
