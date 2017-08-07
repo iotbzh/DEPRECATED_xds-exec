@@ -337,10 +337,10 @@ func main() {
 				tm = timestamp + "| "
 			}
 			if stdout != "" {
-				fmt.Printf("%s%s\n", tm, stdout)
+				fmt.Printf("%s%s", tm, stdout)
 			}
 			if stderr != "" {
-				fmt.Fprintf(os.Stderr, "%s%s\n", tm, stderr)
+				fmt.Fprintf(os.Stderr, "%s%s", tm, stderr)
 			}
 		}
 
