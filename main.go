@@ -14,9 +14,9 @@ import (
 	common "github.com/iotbzh/xds-common/golib"
 	"github.com/iotbzh/xds-server/lib/apiv1"
 	"github.com/iotbzh/xds-server/lib/crosssdk"
-	"github.com/iotbzh/xds-server/lib/xdsconfig"
+	"github.com/iotbzh/xds-server/lib/folder"
 	"github.com/joho/godotenv"
-	"github.com/zhouhui8915/go-socket.io-client"
+	socketio_client "github.com/zhouhui8915/go-socket.io-client"
 )
 
 var appAuthors = []cli.Author{
@@ -249,7 +249,7 @@ func main() {
 		}
 		log.Infof("Result of /folders: %v", string(data[:]))
 
-		folders := xdsconfig.FoldersConfig{}
+		folders := []folder.FolderConfig{}
 		errMar := json.Unmarshal(data, &folders)
 
 		// Check mandatory args
@@ -353,7 +353,7 @@ func main() {
 		})
 
 		// Retrieve the folder definition
-		folder := &xdsconfig.FolderConfig{}
+		var folder *folder.FolderConfig
 		for _, f := range folders {
 			if f.ID == prjID {
 				folder = &f
@@ -365,11 +365,11 @@ func main() {
 		if rPath == "" && folder != nil {
 			cwd, err := os.Getwd()
 			if err == nil {
-				fldRp := folder.RelativePath
+				fldRp := folder.ClientPath
 				if !strings.HasPrefix(fldRp, "/") {
 					fldRp = "/" + fldRp
 				}
-				log.Debugf("Try to auto-setup rPath: cwd=%s ; RelativePath=%s", cwd, fldRp)
+				log.Debugf("Try to auto-setup rPath: cwd=%s ; ClientPath=%s", cwd, fldRp)
 				if sp := strings.SplitAfter(cwd, fldRp); len(sp) == 2 {
 					rPath = strings.Trim(sp[1], "/")
 					log.Debugf("Auto-setup rPath to: '%s'", rPath)
@@ -388,8 +388,8 @@ func main() {
 		args := apiv1.ExecArgs{
 			ID:         prjID,
 			SdkID:      sdkid,
-			Cmd:        strings.Trim(strings.Join(argsCommand, " "), " "),
-			Args:       []string{},
+			Cmd:        strings.Trim(argsCommand[0], " "),
+			Args:       argsCommand[1:],
 			Env:        env,
 			RPath:      rPath,
 			CmdTimeout: 60,
