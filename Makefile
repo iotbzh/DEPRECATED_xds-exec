@@ -1,7 +1,7 @@
 # Makefile used to build xds-exec commands
 
 # Application Version
-VERSION := 1.0.1
+VERSION := 1.0.2
 
 
 # Retrieve git tag/commit to set sub-version string
@@ -10,7 +10,8 @@ ifeq ($(origin SUB_VERSION), undefined)
 	ifneq ($(SUB_VERSION), )
 		VERSION := $(firstword $(subst -, ,$(SUB_VERSION)))
 		SUB_VERSION := $(word 2,$(subst -, ,$(SUB_VERSION)))
-	else
+	endif
+	ifeq ($(SUB_VERSION), )
 		SUB_VERSION := $(shell git rev-parse --short HEAD)
 		ifeq ($(SUB_VERSION), )
 			SUB_VERSION := unknown-dev
@@ -59,7 +60,6 @@ all: vendor build
 build:
 	@echo "### Build $(TARGET) (version $(VERSION), subversion $(SUB_VERSION)) - $(BUILD_MODE)";
 	@cd $(ROOT_SRCDIR); $(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -i -o $(BINDIR)/$(TARGET)$(EXT) -ldflags "$(GORELEASE) -X main.AppVersion=$(VERSION) -X main.AppSubVersion=$(SUB_VERSION)" .
-	@([ "$(HOST_GOOS)" = "linux" ] && { cd $(BINDIR) && ln -sf $(TARGET) $(subst xds-,,$(TARGET)); } || { true; } )
 
 test: tools/glide
 	go test --race $(shell ./tools/glide novendor)
