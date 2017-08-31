@@ -36,8 +36,7 @@ Then create your project you XDS dashboard.
 ```bash
 export DISTRO="Debian_8.0"
 wget -O - http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/Release.key | sudo apt-key add -
-sudo bash -c "cat >/etc/apt/sources.list.d/AGL.list <<EOF
-#AGL
+sudo bash -c "cat >> /etc/apt/sources.list.d/AGL.list <<EOF
 deb http://download.opensuse.org/repositories/isv:/LinuxAutomotive:/app-Development/${DISTRO}/ ./
 EOF
 "
