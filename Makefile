@@ -81,7 +81,7 @@ distclean: clean
 release:
 	RELEASE=1 make -f $(ROOT_SRCDIR)/Makefile clean build
 
-package: clean build
+package: clean vendor build
 	@mkdir -p $(PACKAGE_DIR)/xds-exec
 	@cp -a $(BINDIR)/*exec$(EXT) $(PACKAGE_DIR)/xds-exec
 	@cd $(PACKAGE_DIR) && zip  --symlinks -r $(ROOT_SRCDIR)/xds-exec_$(ARCH)-v$(VERSION)_$(SUB_VERSION).zip ./xds-exec

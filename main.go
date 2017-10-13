@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"strings"
 
@@ -254,7 +255,12 @@ func main() {
 		}
 		c, err := common.HTTPNewClient(baseURL, conf)
 		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
+			errmsg := err.Error()
+			if m, err := regexp.MatchString("Get http.?://", errmsg); m && err == nil {
+				i := strings.LastIndex(errmsg, ":")
+				errmsg = "Cannot connection to " + baseURL + errmsg[i:]
+			}
+			return cli.NewExitError(errmsg, 1)
 		}
 
 		// First call to check that daemon is alive
