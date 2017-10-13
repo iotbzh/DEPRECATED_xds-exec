@@ -69,8 +69,17 @@ func main() {
 	if AppNativeName == "" {
 		AppNativeName = AppName[4:]
 	}
-	appDescription := fmt.Sprintf("%s utility of X(cross) Development System\n", AppNativeName)
 	appUsage := fmt.Sprintf("wrapper on %s for X(cross) Development System.", AppNativeName)
+
+	appDescription := fmt.Sprintf("%s utility of X(cross) Development System\n", AppNativeName)
+	appDescription += `
+   xds-exec configuration is driven either by environment variables or by command line
+   options or using a config file knowning that the following priority order is used:
+     1. use option value (for example use project ID set by --id option),
+     2. else use variable 'XDS_xxx' (for example 'XDS_PROJECT_ID' variable) when a
+        config file is specified with '--config|-c' option,
+     3. else use 'XDS_xxx' (for example 'XDS_PROJECT_ID') environment variable.
+`
 
 	// Create a new App instance
 	app := cli.NewApp()
@@ -179,7 +188,8 @@ func main() {
 					if !exists(confFile) {
 						exitError(1, "Error env config file not found")
 					}
-					err := godotenv.Load(confFile)
+					// Load config file variables that will overwrite env variables
+					err := godotenv.Overload(confFile)
 					if err != nil {
 						exitError(1, "Error loading env config file "+confFile)
 					}
