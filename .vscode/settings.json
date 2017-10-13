@@ -2,13 +2,13 @@
 {
     // Configure glob patterns for excluding files and folders.
     "files.exclude": {
-        "**/.tmp": false,
-        ".git": false,
-        "glide.lock": false,
-        "vendor": false,
-        "debug": false,
-        "bin": false,
-        "tools": false
+        "**/.tmp": true,
+        ".git": true,
+        "glide.lock": true,
+        "vendor": true,
+        "debug": true,
+        "bin": true,
+        "tools": true
     },
     // Words to add to dictionary for a workspace.
     "cSpell.words": [

@@ -163,6 +163,9 @@ func main() {
 	argsCommand := make([]string, len(os.Args))
 	exeName := filepath.Base(os.Args[0])
 
+	// Just use to debug log
+	hostEnv := os.Environ()
+
 	// Split xds-xxx options from native command (eg. make) options
 	// only process args before skip arguments, IOW before '--'
 	found := false
@@ -222,6 +225,8 @@ func main() {
 		}
 		log.Formatter = &logrus.TextFormatter{}
 
+		log.Infof("%s version: %s", AppName, app.Version)
+		log.Debugf("Environment: %v", hostEnv)
 		log.Infof("Execute: %s %v", execCommand, argsCommand)
 
 		// Define HTTP and WS url
@@ -244,10 +249,16 @@ func main() {
 
 		// First call to check that daemon is alive
 		var data []byte
+		if err := c.HTTPGet("/version", &data); err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
+		log.Infof("XDS Server version: %v", string(data[:]))
+
+		// Retrieve folders list used by help output
 		if err := c.HTTPGet("/folders", &data); err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
-		log.Infof("Result of /folders: %v", string(data[:]))
+		log.Debugf("Result of /folders: %v", string(data[:]))
 
 		folders := []folder.FolderConfig{}
 		errMar := json.Unmarshal(data, &folders)
@@ -276,7 +287,7 @@ func main() {
 			if err := c.HTTPGet("/sdks", &data); err != nil {
 				return cli.NewExitError(err.Error(), 1)
 			}
-			log.Infof("Result of /sdks: %v", string(data[:]))
+			log.Debugf("Result of /sdks: %v", string(data[:]))
 
 			sdks := []crosssdk.SDK{}
 			errMar = json.Unmarshal(data, &sdks)
@@ -378,6 +389,7 @@ func main() {
 		}
 
 		// Build env
+		log.Debugf("Command env: %v", envMap)
 		env := []string{}
 		for k, v := range envMap {
 			env = append(env, k+"="+v)
