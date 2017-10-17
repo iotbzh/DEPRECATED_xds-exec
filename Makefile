@@ -22,6 +22,7 @@ endif
 HOST_GOOS=$(shell go env GOOS)
 HOST_GOARCH=$(shell go env GOARCH)
 ARCH=$(HOST_GOOS)-$(HOST_GOARCH)
+REPOPATH=github.com/iotbzh/xds-exec
 
 EXT=
 ifeq ($(HOST_GOOS), windows)
@@ -43,23 +44,31 @@ VERBOSE_2 := -v -x
 
 # Release or Debug mode
 ifeq ($(filter 1,$(RELEASE) $(REL)),)
-	GORELEASE=
+	GO_LDFLAGS=
+	# disable compiler optimizations and inlining
+	GO_GCFLAGS=-N -l
 	BUILD_MODE="Debug mode"
 else
 	# optimized code without debug info
-	GORELEASE= -s -w
+	GO_LDFLAGS=-s -w
+	GO_GCFLAGS=
 	BUILD_MODE="Release mode"
 endif
 
-REPOPATH=github.com/iotbzh/xds-exec
-TARGET := xds-exec
+
+ifeq ($(SUB_VERSION), )
+	PACKAGE_ZIPFILE := xds-exec_$(ARCH)-v$(VERSION).zip
+else
+	PACKAGE_ZIPFILE := xds-exec_$(ARCH)-v$(VERSION)_$(SUB_VERSION).zip
+endif
+
 
 all: vendor build
 
 .PHONY: build
 build:
-	@echo "### Build $(TARGET) (version $(VERSION), subversion $(SUB_VERSION)) - $(BUILD_MODE)";
-	@cd $(ROOT_SRCDIR); $(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -i -o $(BINDIR)/$(TARGET)$(EXT) -ldflags "$(GORELEASE) -X main.AppVersion=$(VERSION) -X main.AppSubVersion=$(SUB_VERSION)" .
+	@echo "### Build xds-exec (version $(VERSION), subversion $(SUB_VERSION)) - $(BUILD_MODE)";
+	@cd $(ROOT_SRCDIR); $(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -i -o $(BINDIR)/xds-exec$(EXT) -ldflags "$(GO_LDFLAGS) -X main.AppVersion=$(VERSION) -X main.AppSubVersion=$(SUB_VERSION)" -gcflags "$(GO_GCFLAGS)" .
 
 test: tools/glide
 	go test --race $(shell ./tools/glide novendor)
@@ -84,7 +93,8 @@ release:
 package: clean vendor build
 	@mkdir -p $(PACKAGE_DIR)/xds-exec
 	@cp -a $(BINDIR)/*exec$(EXT) $(PACKAGE_DIR)/xds-exec
-	@cd $(PACKAGE_DIR) && zip  --symlinks -r $(ROOT_SRCDIR)/xds-exec_$(ARCH)-v$(VERSION)_$(SUB_VERSION).zip ./xds-exec
+	@cp -r $(ROOT_SRCDIR)/conf.d $(ROOT_SRCDIR)/scripts $(PACKAGE_DIR)/xds-exec
+	cd $(PACKAGE_DIR) && zip -r $(ROOT_SRCDIR)/$(PACKAGE_ZIPFILE) ./xds-exec
 
 .PHONY: package-all
 package-all:
@@ -95,6 +105,15 @@ package-all:
 	@echo "# Build darwin amd64..."
 	GOOS=darwin GOARCH=amd64 RELEASE=1 make -f $(ROOT_SRCDIR)/Makefile package
 	make -f $(ROOT_SRCDIR)/Makefile clean
+
+.PHONY: install
+install:
+	@test -e $(LOCAL_BINDIR)/xds-exec$(EXT) || { echo "Please execute first: make all\n"; exit 1; }
+	export DESTDIR=$(DESTDIR) && $(ROOT_SRCDIR)/scripts/install.sh
+
+.PHONY: uninstall
+uninstall:
+	export DESTDIR=$(DESTDIR) && $(ROOT_SRCDIR)/scripts/install.sh uninstall
 
 vendor: tools/glide glide.yaml
 	./tools/glide install --strip-vendor
