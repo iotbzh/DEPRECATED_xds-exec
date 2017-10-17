@@ -2,7 +2,7 @@
 
 # Application Version
 VERSION := 1.0.3
-
+TARGET=xds-exec
 
 # Retrieve git tag/commit to set sub-version string
 ifeq ($(origin SUB_VERSION), undefined)
@@ -22,7 +22,7 @@ endif
 HOST_GOOS=$(shell go env GOOS)
 HOST_GOARCH=$(shell go env GOARCH)
 ARCH=$(HOST_GOOS)-$(HOST_GOARCH)
-REPOPATH=github.com/iotbzh/xds-exec
+REPOPATH=github.com/iotbzh/$(TARGET)
 
 EXT=
 ifeq ($(HOST_GOOS), windows)
@@ -57,18 +57,18 @@ endif
 
 
 ifeq ($(SUB_VERSION), )
-	PACKAGE_ZIPFILE := xds-exec_$(ARCH)-v$(VERSION).zip
+	PACKAGE_ZIPFILE := $(TARGET)_$(ARCH)-v$(VERSION).zip
 else
-	PACKAGE_ZIPFILE := xds-exec_$(ARCH)-v$(VERSION)_$(SUB_VERSION).zip
+	PACKAGE_ZIPFILE := $(TARGET)_$(ARCH)-v$(VERSION)_$(SUB_VERSION).zip
 endif
 
-
+.PHONY: all
 all: vendor build
 
 .PHONY: build
 build:
-	@echo "### Build xds-exec (version $(VERSION), subversion $(SUB_VERSION)) - $(BUILD_MODE)";
-	@cd $(ROOT_SRCDIR); $(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -i -o $(BINDIR)/xds-exec$(EXT) -ldflags "$(GO_LDFLAGS) -X main.AppVersion=$(VERSION) -X main.AppSubVersion=$(SUB_VERSION)" -gcflags "$(GO_GCFLAGS)" .
+	@echo "### Build $(TARGET) (version $(VERSION), subversion $(SUB_VERSION)) - $(BUILD_MODE)";
+	@cd $(ROOT_SRCDIR); $(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -i -o $(BINDIR)/$(TARGET)$(EXT) -ldflags "$(GO_LDFLAGS) -X main.AppVersion=$(VERSION) -X main.AppSubVersion=$(SUB_VERSION)" -gcflags "$(GO_GCFLAGS)" .
 
 test: tools/glide
 	go test --race $(shell ./tools/glide novendor)
@@ -91,10 +91,10 @@ release:
 	RELEASE=1 make -f $(ROOT_SRCDIR)/Makefile clean build
 
 package: clean vendor build
-	@mkdir -p $(PACKAGE_DIR)/xds-exec
-	@cp -a $(BINDIR)/*exec$(EXT) $(PACKAGE_DIR)/xds-exec
-	@cp -r $(ROOT_SRCDIR)/conf.d $(ROOT_SRCDIR)/scripts $(PACKAGE_DIR)/xds-exec
-	cd $(PACKAGE_DIR) && zip -r $(ROOT_SRCDIR)/$(PACKAGE_ZIPFILE) ./xds-exec
+	@mkdir -p $(PACKAGE_DIR)/$(TARGET)
+	@cp -a $(BINDIR)/*exec$(EXT) $(PACKAGE_DIR)/$(TARGET)
+	@cp -r $(ROOT_SRCDIR)/conf.d $(ROOT_SRCDIR)/scripts $(PACKAGE_DIR)/$(TARGET)
+	cd $(PACKAGE_DIR) && zip -r $(ROOT_SRCDIR)/$(PACKAGE_ZIPFILE) ./$(TARGET)
 
 .PHONY: package-all
 package-all:
@@ -108,7 +108,7 @@ package-all:
 
 .PHONY: install
 install:
-	@test -e $(LOCAL_BINDIR)/xds-exec$(EXT) || { echo "Please execute first: make all\n"; exit 1; }
+	@test -e $(LOCAL_BINDIR)/$(TARGET)$(EXT) || { echo "Please execute first: make all\n"; exit 1; }
 	export DESTDIR=$(DESTDIR) && $(ROOT_SRCDIR)/scripts/install.sh
 
 .PHONY: uninstall
@@ -133,6 +133,7 @@ help:
 	@echo "  release"
 	@echo "  clean"
 	@echo "  package"
+	@echo "  install / uninstall"
 	@echo "  distclean"
 	@echo ""
 	@echo "Influential make variables:"
