@@ -11,13 +11,11 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/codegangsta/cli"
+	"github.com/iotbzh/xds-agent/lib/xaapiv1"
 	common "github.com/iotbzh/xds-common/golib"
-	"github.com/iotbzh/xds-server/lib/apiv1"
-	"github.com/iotbzh/xds-server/lib/crosssdk"
-	"github.com/iotbzh/xds-server/lib/folder"
 	"github.com/joho/godotenv"
-	socketio_client "github.com/zhouhui8915/go-socket.io-client"
+	socketio_client "github.com/sebd71/go-socket.io-client"
+	"github.com/urfave/cli"
 )
 
 var appAuthors = []cli.Author{
@@ -250,7 +248,7 @@ func main() {
 		log.Debugln("Connect HTTP client on ", baseURL)
 		conf := common.HTTPClientConfig{
 			URLPrefix:           "/api/v1",
-			HeaderClientKeyName: "XDS-SID",
+			HeaderClientKeyName: "Xds-Agent-Sid",
 			CsrfDisable:         true,
 		}
 		c, err := common.HTTPNewClient(baseURL, conf)
@@ -268,16 +266,16 @@ func main() {
 		if err := c.HTTPGet("/version", &data); err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
-		log.Infof("XDS Server version: %v", string(data[:]))
+		log.Infof("XDS Agent/Server version: %v", string(data[:]))
 
-		// Retrieve folders list used by help output
-		if err := c.HTTPGet("/folders", &data); err != nil {
+		// Retrieve projects list used by help output
+		if err := c.HTTPGet("/projects", &data); err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
-		log.Debugf("Result of /folders: %v", string(data[:]))
+		log.Debugf("Result of /projects: %v", string(data[:]))
 
-		folders := []folder.FolderConfig{}
-		errMar := json.Unmarshal(data, &folders)
+		projects := []xaapiv1.ProjectConfig{}
+		errMar := json.Unmarshal(data, &projects)
 
 		// Check mandatory args
 		if prjID == "" || listProject {
@@ -290,7 +288,7 @@ func main() {
 			if errMar == nil {
 				msg += "List of existing projects (use: export XDS_PROJECT_ID=<< ID >>): \n"
 				msg += "  ID\t\t\t\t | Label"
-				for _, f := range folders {
+				for _, f := range projects {
 					msg += fmt.Sprintf("\n  %s\t | %s", f.ID, f.Label)
 					if f.DefaultSdk != "" {
 						msg += fmt.Sprintf("\t(default SDK: %s)", f.DefaultSdk)
@@ -300,12 +298,12 @@ func main() {
 			}
 
 			data = nil
-			if err := c.HTTPGet("/sdks", &data); err != nil {
+			if err := c.HTTPGet("/servers/0/sdks", &data); err != nil {
 				return cli.NewExitError(err.Error(), 1)
 			}
 			log.Debugf("Result of /sdks: %v", string(data[:]))
 
-			sdks := []crosssdk.SDK{}
+			sdks := []xaapiv1.SDK{}
 			errMar = json.Unmarshal(data, &sdks)
 			if errMar == nil {
 				msg += "\nList of installed cross SDKs (use: export XDS_SDK_ID=<< ID >>): \n"
@@ -315,12 +313,12 @@ func main() {
 				}
 			}
 
-			if len(folders) > 0 && len(sdks) > 0 {
+			if len(projects) > 0 && len(sdks) > 0 {
 				msg += fmt.Sprintf("\n")
 				msg += fmt.Sprintf("For example: \n")
-				msg += fmt.Sprintf("  %s --id %q --sdkid %q -- %s\n", AppName, folders[0].ID, sdks[0].ID, ccHelp)
+				msg += fmt.Sprintf("  %s --id %q --sdkid %q -- %s\n", AppName, projects[0].ID, sdks[0].ID, ccHelp)
 				msg += " or\n"
-				msg += fmt.Sprintf("  XDS_PROJECT_ID=%q XDS_SDK_ID=%q  %s %s\n", folders[0].ID, sdks[0].ID, AppNativeName, ccHelp)
+				msg += fmt.Sprintf("  XDS_PROJECT_ID=%q XDS_SDK_ID=%q  %s %s\n", projects[0].ID, sdks[0].ID, AppNativeName, ccHelp)
 			}
 
 			return cli.NewExitError(msg, exc)
@@ -333,7 +331,7 @@ func main() {
 			Transport: "websocket",
 			Header:    make(map[string][]string),
 		}
-		opts.Header["XDS-SID"] = []string{c.GetClientID()}
+		opts.Header["XDS-AGENT-SID"] = []string{c.GetClientID()}
 
 		iosk, err := socketio_client.NewClient(baseURL, opts)
 		if err != nil {
@@ -371,28 +369,28 @@ func main() {
 			}
 		}
 
-		iosk.On(apiv1.ExecOutEvent, func(ev apiv1.ExecOutMsg) {
+		iosk.On(xaapiv1.ExecOutEvent, func(ev xaapiv1.ExecOutMsg) {
 			outFunc(ev.Timestamp, ev.Stdout, ev.Stderr)
 		})
 
-		iosk.On(apiv1.ExecExitEvent, func(ev apiv1.ExecExitMsg) {
+		iosk.On(xaapiv1.ExecExitEvent, func(ev xaapiv1.ExecExitMsg) {
 			exitChan <- exitResult{ev.Error, ev.Code}
 		})
 
-		// Retrieve the folder definition
-		var folder *folder.FolderConfig
-		for _, f := range folders {
+		// Retrieve the projects definition
+		var project *xaapiv1.ProjectConfig
+		for _, f := range projects {
 			if f.ID == prjID {
-				folder = &f
+				project = &f
 				break
 			}
 		}
 
 		// Auto setup rPath if needed
-		if rPath == "" && folder != nil {
+		if rPath == "" && project != nil {
 			cwd, err := os.Getwd()
 			if err == nil {
-				fldRp := folder.ClientPath
+				fldRp := project.ClientPath
 				if !strings.HasPrefix(fldRp, "/") {
 					fldRp = "/" + fldRp
 				}
@@ -413,7 +411,7 @@ func main() {
 
 		// Send build command
 		var body []byte
-		args := apiv1.ExecArgs{
+		args := xaapiv1.ExecArgs{
 			ID:         prjID,
 			SdkID:      sdkid,
 			Cmd:        strings.Trim(argsCommand[0], " "),

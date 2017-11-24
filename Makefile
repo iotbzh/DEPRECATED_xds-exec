@@ -1,22 +1,23 @@
 # Makefile used to build xds-exec commands
 
-# Application Version
-VERSION := 1.0.3
+# Application Name
 TARGET=xds-exec
 
-# Retrieve git tag/commit to set sub-version string
-ifeq ($(origin SUB_VERSION), undefined)
-	SUB_VERSION := $(shell git describe --exact-match --tags 2>/dev/null | sed 's/^v//')
-	ifneq ($(SUB_VERSION), )
-		VERSION := $(firstword $(subst -, ,$(SUB_VERSION)))
-		SUB_VERSION := $(word 2,$(subst -, ,$(SUB_VERSION)))
+
+# Retrieve git tag/commit to set version & sub-version strings
+GIT_DESC := $(shell git describe --always --tags)
+VERSION := $(firstword $(subst -, ,$(GIT_DESC)))
+SUB_VERSION := $(subst $(VERSION)-,,$(GIT_DESC))
+ifeq ($(VERSION), )
+	VERSION := unknown-dev
 	endif
 	ifeq ($(SUB_VERSION), )
-		SUB_VERSION := $(shell git rev-parse --short HEAD)
-		ifeq ($(SUB_VERSION), )
-			SUB_VERSION := unknown-dev
+	SUB_VERSION := $(shell date +'%Y-%m-%d_%H%M%S')
 		endif
-	endif
+
+# Configurable variables for installation (default /opt/AGL/...)
+ifeq ($(origin DESTDIR), undefined)
+	DESTDIR := /opt/AGL/xds/exec
 endif
 
 HOST_GOOS=$(shell go env GOOS)
@@ -29,15 +30,15 @@ ifeq ($(HOST_GOOS), windows)
 	EXT=.exe
 endif
 
-
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 ROOT_SRCDIR := $(patsubst %/,%,$(dir $(mkfile_path)))
-BINDIR := $(ROOT_SRCDIR)/bin
 ROOT_GOPRJ := $(abspath $(ROOT_SRCDIR)/../../../..)
+LOCAL_BINDIR := $(ROOT_SRCDIR)/bin
+LOCAL_TOOLSDIR := $(ROOT_SRCDIR)/tools/${HOST_GOOS}
 PACKAGE_DIR := $(ROOT_SRCDIR)/package
 
 export GOPATH := $(shell go env GOPATH):$(ROOT_GOPRJ)
-export PATH := $(PATH):$(ROOT_SRCDIR)/tools
+export PATH := $(PATH):$(LOCAL_TOOLSDIR)
 
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
@@ -67,24 +68,25 @@ all: vendor build
 
 .PHONY: build
 build:
-	@echo "### Build $(TARGET) (version $(VERSION), subversion $(SUB_VERSION)) - $(BUILD_MODE)";
-	@cd $(ROOT_SRCDIR); $(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -i -o $(BINDIR)/$(TARGET)$(EXT) -ldflags "$(GO_LDFLAGS) -X main.AppVersion=$(VERSION) -X main.AppSubVersion=$(SUB_VERSION)" -gcflags "$(GO_GCFLAGS)" .
+	@echo "### Build $(TARGET) (version $(VERSION), subversion $(SUB_VERSION) - $(BUILD_MODE))";
+	@cd $(ROOT_SRCDIR); $(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -i -o $(LOCAL_BINDIR)/$(TARGET)$(EXT) -ldflags "$(GO_LDFLAGS) -X main.AppVersion=$(VERSION) -X main.AppSubVersion=$(SUB_VERSION)" -gcflags "$(GO_GCFLAGS)" .
 
 test: tools/glide
-	go test --race $(shell ./tools/glide novendor)
+	go test --race $(shell $(LOCAL_TOOLSDIR)/glide novendor)
 
 vet: tools/glide
-	go vet $(shell ./tools/glide novendor)
+	go vet $(shell $(LOCAL_TOOLSDIR)/glide novendor)
 
 fmt: tools/glide
-	go fmt $(shell ./tools/glide novendor)
+	go fmt $(shell $(LOCAL_TOOLSDIR)/glide novendor)
 
 .PHONY: clean
 clean:
-	rm -rf $(BINDIR)/* debug $(ROOT_GOPRJ)/pkg/*/$(REPOPATH) $(PACKAGE_DIR)
+	rm -rf $(LOCAL_BINDIR)/* debug $(ROOT_GOPRJ)/pkg/*/$(REPOPATH) $(PACKAGE_DIR)
 
+.PHONY: distclean
 distclean: clean
-	rm -rf $(BINDIR) tools glide.lock vendor $(ROOT_SRCDIR)/*.zip
+	rm -rf $(LOCAL_BINDIR) $(ROOT_SRCDIR)/tools glide.lock vendor $(ROOT_SRCDIR)/*.zip
 
 .PHONY: release
 release:
@@ -92,7 +94,7 @@ release:
 
 package: clean vendor build
 	@mkdir -p $(PACKAGE_DIR)/$(TARGET)
-	@cp -a $(BINDIR)/*exec$(EXT) $(PACKAGE_DIR)/$(TARGET)
+	@cp -a $(LOCAL_BINDIR)/*exec$(EXT) $(PACKAGE_DIR)/$(TARGET)
 	@cp -r $(ROOT_SRCDIR)/conf.d $(ROOT_SRCDIR)/scripts $(PACKAGE_DIR)/$(TARGET)
 	cd $(PACKAGE_DIR) && zip -r $(ROOT_SRCDIR)/$(PACKAGE_ZIPFILE) ./$(TARGET)
 
@@ -116,15 +118,20 @@ uninstall:
 	export DESTDIR=$(DESTDIR) && $(ROOT_SRCDIR)/scripts/install.sh uninstall
 
 vendor: tools/glide glide.yaml
-	./tools/glide install --strip-vendor
+	$(LOCAL_TOOLSDIR)/glide install --strip-vendor
 
 vendor/debug: vendor
-	(cd vendor/github.com/iotbzh && rm -rf xds-server && ln -s ../../../../xds-server)
+	(cd vendor/github.com/iotbzh && \
+		rm -rf xds-common && ln -s ../../../../xds-common && \
+		rm -rf xds-agent && ln -s ../../../../xds-agent )
 
+.PHONY: tools/glide
 tools/glide:
-	@echo "Downloading glide"
-	mkdir -p tools
-	curl --silent -L https://glide.sh/get | GOBIN=./tools  sh
+	@test -f $(LOCAL_TOOLSDIR)/glide || { \
+		echo "Downloading glide"; \
+		mkdir -p $(LOCAL_TOOLSDIR); \
+		curl --silent -L https://glide.sh/get | GOBIN=$(LOCAL_TOOLSDIR)  sh; \
+	}
 
 help:
 	@echo "Main supported rules:"
