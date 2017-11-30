@@ -1,16 +1,34 @@
 #!/bin/bash
-
-# Install XDS exec
+###########################################################################
+# Copyright 2017 IoT.bzh
+#
+# author: Sebastien Douheret <sebastien@iot.bzh>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Script used to install XDS exec tool.
+#
+###########################################################################
 
 DESTDIR=${DESTDIR:-/opt/AGL/xds/exec}
 
 ROOT_SRCDIR=$(cd $(dirname "$0")/.. && pwd)
 
 install() {
-    mkdir -p ${DESTDIR} && cp ${ROOT_SRCDIR}/bin/* ${DESTDIR} || exit 1
+    mkdir -p "${DESTDIR}" && cp "${ROOT_SRCDIR}/bin/*" "${DESTDIR}" || exit 1
 
     FILE=/etc/profile.d/xds-exec.sh
-    sed -e "s;%%XDS_INSTALL_BIN_DIR%%;${DESTDIR};g" ${ROOT_SRCDIR}/conf.d/${FILE} > ${FILE} || exit 1
+    sed -e "s;%%XDS_INSTALL_BIN_DIR%%;${DESTDIR};g" "${ROOT_SRCDIR}/conf.d/${FILE}" > ${FILE} || exit 1
 }
 
 uninstall() {
