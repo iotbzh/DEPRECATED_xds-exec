@@ -4,5 +4,6 @@ glide.lock
 vendor
 package
 
+*.zip
 debug
 __*

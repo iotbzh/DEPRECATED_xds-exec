@@ -24,13 +24,15 @@ TARGET=xds-exec
 # Retrieve git tag/commit to set version & sub-version strings
 GIT_DESC := $(shell git describe --always --tags)
 VERSION := $(firstword $(subst -, ,$(GIT_DESC)))
-SUB_VERSION := $(subst $(VERSION)-,,$(GIT_DESC))
+ifeq (-,$(findstring -,$(GIT_DESC)))
+	SUB_VERSION := $(subst $(VERSION)-,,$(GIT_DESC))
+endif
 ifeq ($(VERSION), )
 	VERSION := unknown-dev
-	endif
-	ifeq ($(SUB_VERSION), )
+endif
+ifeq ($(SUB_VERSION), )
 	SUB_VERSION := $(shell date +'%Y-%m-%d_%H%M%S')
-		endif
+endif
 
 # Configurable variables for installation (default /opt/AGL/...)
 ifeq ($(origin DESTDIR), undefined)
@@ -75,9 +77,9 @@ endif
 
 
 ifeq ($(SUB_VERSION), )
-	PACKAGE_ZIPFILE := $(TARGET)_$(ARCH)-v$(VERSION).zip
+	PACKAGE_ZIPFILE := $(TARGET)_$(ARCH)-$(VERSION).zip
 else
-	PACKAGE_ZIPFILE := $(TARGET)_$(ARCH)-v$(VERSION)_$(SUB_VERSION).zip
+	PACKAGE_ZIPFILE := $(TARGET)_$(ARCH)-$(VERSION)_$(SUB_VERSION).zip
 endif
 
 .PHONY: all

@@ -12,11 +12,7 @@
     },
     // Words to add to dictionary for a workspace.
     "cSpell.words": [
-        "apiv",
-        "iosk",
-        "zhouhui",
-        "ldflags",
-        "socketio",
-        "xdsconfig"
+        "xaapiv", "iosk", "zhouhui", "ldflags", "socketio", "xdsconfig", "golib",
+        "joho", "sebd", "urfave", "sdkid", "godotenv"
     ]
 }
