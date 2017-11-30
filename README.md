@@ -2,10 +2,13 @@
 
 `xds-exec` is a wrapper on exec linux command for X(cross) Development System.
 
-> **xds-exec will be deprecated** in a near future, please use **[xds-cli](https://github.com/iotbzh/xds-cli) tool**
-> instead, and specific `exec` sub-command (for example: `xds-cli exec ...`)
-that is equivalent to xds-exec.
+:bangbang::bangbang::bangbang:
 
+**xds-exec will be deprecated** in a near future, please use **[xds-cli](https://github.com/iotbzh/xds-cli) tool**
+instead, and specific `exec` sub-command (for example: `xds-cli exec ...`) that is equivalent to xds-exec.
+
+:bangbang::bangbang::bangbang:
+  
 ## Documentation
 
 Please find XDS User's Guide online at :
