@@ -156,9 +156,9 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:        "url",
-			EnvVar:      "XDS_SERVER_URL",
+			EnvVar:      "XDS_AGENT_URL",
 			Value:       "localhost:8000",
-			Usage:       "remote XDS server url",
+			Usage:       "local XDS agent url",
 			Destination: &uri,
 		},
 	}
